@@ -1,35 +1,59 @@
 # -*- coding: utf-8 -*-
-__version__ = '0.1.0'
+"""Text processing demo
+
+Simplified version of a text processing pipeline.
+
+    * load data
+    * clean text
+    * vectorize (with a word embedding)
+    * reduce dimension
+    * cluster
+
+Sources:
+    https://www.kaggle.com/tmdb/tmdb-movie-metadata
+    https://fasttext.cc/docs/en/pretrained-vectors.html
+    https://radimrehurek.com/gensim_3.8.3/models/fasttext.html
+    https://radimrehurek.com/gensim_3.8.3/auto_examples/tutorials/run_fasttext.html
+
+Pre-trained FastText:
+    https://dl.fbaipublicfiles.com/fasttext/vectors-wiki/wiki.en.zip
+"""
+__version__ = "0.1.0"
 
 import configparser
 import json
 import logging
+import functools
 import os
 import string
 
+import gensim
+import hdbscan
 import nltk
+import numpy as np
 import pandas as pd
 
 CONFIG_FILEPATH = os.path.join(
-    os.path.expanduser("~"),
-    "text_processing_demo_config.ini"
+    os.path.expanduser("~"), "text_processing_demo_config.ini"
 )
 
 
-def read_config():
+def _read_config():
     config = configparser.ConfigParser()
     config.read(CONFIG_FILEPATH)
     return config
 
 
-def setup_logging():
+def _setup_logging():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
 
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
@@ -43,10 +67,11 @@ def fetch_stopwords():
     return stopword_set
 
 
-config = read_config()
-logger = setup_logging()
+config = _read_config()
+logger = _setup_logging()
 
 STOPWORDS = fetch_stopwords()
+RANDOM_STATE = 3052528580
 
 
 def load_movie_data():
@@ -60,6 +85,7 @@ def load_movie_data():
             overview: Short description
             genres: Sorted tuple of genres
     """
+
     def convert_genres(genres):
         """Json dict list to tuple of names
         Genre comes in as json:
@@ -101,12 +127,14 @@ def clean_overview_text(text: str):
     text = text.replace("!", ".").replace("?", ".")
     first_sentence = text.split(".")[0]
 
-    translation_table = str.maketrans('', '', string.punctuation)
+    translation_table = str.maketrans("", "", string.punctuation)
     no_punctuation = first_sentence.translate(translation_table)
 
     lowercase = no_punctuation.lower()
 
-    no_stopwords = " ".join(word for word in lowercase.split(" ") if word not in STOPWORDS)
+    no_stopwords = " ".join(
+        word for word in lowercase.split(" ") if word not in STOPWORDS
+    )
 
     return no_stopwords
 
@@ -122,9 +150,88 @@ def clean_overview_col(df: pd.DataFrame, col: str):
     return df
 
 
+def fetch_fasstext_pretrained():
+    filepath = config["filepaths"]["FastTextPretrainedBinary"]
+    logger.info(f"Loading FastText pretrained from {filepath}")
+    wv = gensim.models.fasttext.load_facebook_vectors(filepath)
+
+    logger.info("Model loaded")
+    return wv
+
+
+def vectorize_text(
+    wv: gensim.models.keyedvectors.WordEmbeddingsKeyedVectors, text: str
+):
+    """Apply word vectorizer to text.
+
+    This takes a simple averaging approach
+    i.e. every word in the text is passed to the model and the resulting
+    vectors are averaged.
+    """
+    vecs = np.array([wv[word] for word in text.split(" ")])
+
+    return np.mean(vecs, axis=0)
+
+
+def reduce_dimensionality(vector_col: pd.Series):
+    # There have been issues with the umap import
+    import umap
+
+    logger.info("Applying umap to reduce dimension")
+    vecs = np.array(list(vector_col.values))
+
+    clusterable_embedding = umap.UMAP(
+        n_neighbors=5,
+        min_dist=0.0,
+        n_components=10,
+        random_state=RANDOM_STATE,
+        verbose=10,
+    ).fit_transform(vecs)
+
+    return pd.Series(data=clusterable_embedding.tolist(), index=vector_col.index)
+
+
+def cluster(vector_col: pd.Series):
+
+    vecs = np.array(list(vector_col))
+
+    labels = hdbscan.HDBSCAN().fit_predict(vecs)
+
+    return pd.Series(data=labels.tolist(), index=vector_col.index)
+
+
+def plot_embedding(df):
+    import matplotlib.pyplot as plt
+    import seaborn
+    import sklearn
+
+    target = sklearn.preprocessing.LabelEncoder().fit_transform(df.genres)
+
+    vecs = np.array(list(df["overview_cleaned_vectorized_low_dimension"].values))
+
+    plt.scatter(vecs[:, 0], vecs[:, 1], c=target, s=0.1, cmap="Spectral")
+
+    plt.show()
+
+
 if __name__ == "__main__":
 
     movies_df = load_movie_data()
 
     movies_df = clean_overview_col(movies_df, "overview")
 
+    wv = fetch_fasstext_pretrained()
+
+    text_to_vec = functools.partial(vectorize_text, wv)
+
+    movies_df["overview_cleaned_vectorized"] = movies_df.overview_cleaned.apply(
+        text_to_vec
+    )
+
+    movies_df["overview_cleaned_vectorized_low_dimension"] = reduce_dimensionality(
+        movies_df.overview_cleaned_vectorized
+    )
+
+    movies_df["label"] = cluster(movies_df.overview_cleaned_vectorized_low_dimension)
+
+    plot_embedding(movies_df)
