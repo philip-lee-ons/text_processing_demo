@@ -6,13 +6,12 @@ authors = ["Philip Lee <philip.l.lee@ons.gov.uk>"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-nltk = "^3.5"
+nltk = "^3.4"
 umap-learn = "^0.4.6"
-pandas = "^1.1.4"
+pandas = "^1.1.0"
 scikit-learn = "^0.23.2"
 seaborn = "^0.11.0"
 matplotlib = "^3.3.2"
-plotly = "^4.12.0"
 hdbscan = "^0.8.26"
 gensim = "^3.8.3"
 
