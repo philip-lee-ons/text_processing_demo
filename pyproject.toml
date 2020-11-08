@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "text_processing_demo"
+version = "0.1.0"
+description = ""
+authors = ["Philip Lee <philip.l.lee@ons.gov.uk>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+nltk = "^3.5"
+umap-learn = "^0.4.6"
+pandas = "^1.1.4"
+scikit-learn = "^0.23.2"
+seaborn = "^0.11.0"
+matplotlib = "^3.3.2"
+plotly = "^4.12.0"
+hdbscan = "^0.8.26"
+gensim = "^3.8.3"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+pytest-runner = "^5.2"
+black = "^20.8b1"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
