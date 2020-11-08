@@ -103,7 +103,7 @@ def load_movie_data(filepath=None):
         genres_out = tuple(sorted(genre_names))
         return genres_out
 
-    if filepath is not None:
+    if filepath is None:
         filepath = config["filepaths"]["MovieData"]
 
     logger.info(f"Reading Movie data from {filepath}")
@@ -154,9 +154,9 @@ def clean_overview_col(df: pd.DataFrame, col: str):
 
 
 def fetch_fasstext_pretrained(filepath=None):
-    if filepath is not None:
+    if filepath is None:
         filepath = config["filepaths"]["FastTextPretrainedBinary"]
-        
+
     logger.info(f"Loading FastText pretrained from {filepath}")
     wv = gensim.models.fasttext.load_facebook_vectors(filepath)
 
