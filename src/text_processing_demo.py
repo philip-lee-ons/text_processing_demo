@@ -75,7 +75,7 @@ STOPWORDS = fetch_stopwords()
 RANDOM_STATE = 3052528580
 
 
-def load_movie_data():
+def load_movie_data(filepath=None):
     """Loads Movie data.
 
     Location set in config.ini.
@@ -103,7 +103,9 @@ def load_movie_data():
         genres_out = tuple(sorted(genre_names))
         return genres_out
 
-    filepath = config["filepaths"]["MovieData"]
+    if filepath is not None:
+        filepath = config["filepaths"]["MovieData"]
+
     logger.info(f"Reading Movie data from {filepath}")
 
     df = pd.read_csv(filepath, usecols=["original_title", "overview", "genres"])
@@ -151,8 +153,10 @@ def clean_overview_col(df: pd.DataFrame, col: str):
     return df
 
 
-def fetch_fasstext_pretrained():
-    filepath = config["filepaths"]["FastTextPretrainedBinary"]
+def fetch_fasstext_pretrained(filepath=None):
+    if filepath is not None:
+        filepath = config["filepaths"]["FastTextPretrainedBinary"]
+        
     logger.info(f"Loading FastText pretrained from {filepath}")
     wv = gensim.models.fasttext.load_facebook_vectors(filepath)
 
