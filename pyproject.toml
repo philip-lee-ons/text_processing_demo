@@ -3,9 +3,6 @@ name = "text_processing_demo"
 version = "0.1.0"
 description = ""
 authors = ["Philip Lee <philip.l.lee@ons.gov.uk>"]
-packages = [
-    { include = "text_processing_demo", from = "src" }
-]
 
 [tool.poetry.dependencies]
 python = "^3.7"
