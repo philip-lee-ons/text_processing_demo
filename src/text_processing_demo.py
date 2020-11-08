@@ -32,6 +32,7 @@ import hdbscan
 import nltk
 import numpy as np
 import pandas as pd
+import sklearn
 
 CONFIG_FILEPATH = os.path.join(
     os.path.expanduser("~"), "text_processing_demo_config.ini"
@@ -198,6 +199,18 @@ def cluster(vector_col: pd.Series):
     labels = hdbscan.HDBSCAN().fit_predict(vecs)
 
     return pd.Series(data=labels.tolist(), index=vector_col.index)
+
+
+def evaluate(df, original, labels):
+    """Cluster similarity"""
+    labels_true = df[original]
+    labels_pred = df[labels]
+    result = sklearn.metrics.cluster.adjusted_rand_score(
+        labels_true=labels_true, labels_pred=labels_pred
+    )
+
+    logger.info("Are these labellings anything like each other?")
+    logger.info(f"Adjusted rand score: {result}")
 
 
 def plot_embedding(df):
